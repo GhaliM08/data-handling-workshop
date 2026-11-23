@@ -1,0 +1,26 @@
+import pandas as pd, matplotlib
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
+df = pd.read_csv('data/retail_clean.csv', parse_dates=['InvoiceDate'])
+print('TotalAmount describe:', df['TotalAmount'].describe().round(2).to_dict())
+known = df[df['Country'] != 'Unknown']
+top5 = known.groupby('Country')['TotalAmount'].sum().sort_values(ascending=False).head(5).round(2)
+print(top5.to_string())
+gross = known[known.TransactionType=='Purchase'].groupby('Country')['TotalAmount'].sum().round(2)
+print('gross purchases top5:', gross.sort_values(ascending=False).head(5).to_dict())
+share = (top5 / known['TotalAmount'].sum() * 100).round(1)
+print('share of net sales (%):', share.to_dict(), 'total net:', round(known['TotalAmount'].sum(),2))
+uk = known[known.Country=='United Kingdom']['TotalAmount'].sum()
+print('UK share of net:', round(uk/known['TotalAmount'].sum()*100,1))
+print('cancellation total:', round(df.loc[df.TransactionType=='Cancellation','TotalAmount'].sum(),2))
+top5.to_csv('data/top5_countries.csv', header=['TotalSales'])
+fig, ax = plt.subplots(figsize=(8,5))
+bars = ax.bar(top5.index, top5.values, color='#2E75B6')
+for b,v in zip(bars, top5.values):
+    ax.text(b.get_x()+b.get_width()/2, v, f'£{v:,.0f}', ha='center', va='bottom', fontsize=9)
+ax.set_title('Top 5 Countries by Total Sales (net of cancellations)', fontsize=13, pad=12)
+ax.set_xlabel('Country'); ax.set_ylabel('Total sales (GBP £)')
+ax.yaxis.set_major_formatter(matplotlib.ticker.StrMethodFormatter('£{x:,.0f}'))
+ax.spines[['top','right']].set_visible(False)
+plt.tight_layout(); plt.savefig('data/top5_countries.png', dpi=150)
+print('saved')
